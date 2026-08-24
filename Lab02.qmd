@@ -1,0 +1,120 @@
+---
+title: "Lab02"
+author: "Tiago Perroni"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+
+```
+
+1.
+
+Para calcular a proporção global de voos atrasados acumulando dados lote a lote sem carregar tudo na memória, não podemos apenas tirar a média das médias dos lotes.
+
+As estatísticas suficientes necessárias para cada grupo (Dia, Mês e Cia. Aérea) são:
+
+n_total: O número total de voos no grupo (contagem total de observações válidas).
+
+n_atrasos: O número de voos do grupo que apresentaram atraso na chegada maior que 10 minutos 
+(ARRIVAL_DELAY > 10).
+
+2 e 3.
+
+```{r}
+getStats <- function(input, pos) {
+  input %>%
+    filter(AIRLINE %in% c("AA", "DL", "UA", "US")) %>%
+    filter(!is.na(MONTH), !is.na(DAY), !is.na(ARRIVAL_DELAY)) %>%
+    group_by(MONTH, DAY, AIRLINE) %>%
+    summarise(n_total = n(), n_atrasos = sum(ARRIVAL_DELAY > 10), .groups = "drop")
+}
+col_spec <- cols_only(
+  MONTH = col_integer(),
+  DAY = col_integer(),
+  AIRLINE = col_character(),
+  ARRIVAL_DELAY = col_double()
+)
+stats_acumuladas <- read_csv_chunked(
+  file = "flights.csv.zip",
+  callback = DataFrameCallback$new(getStats),
+  chunk_size = 100000,
+  col_types = col_spec
+)
+```
+
+4.
+
+```{r}
+computeStats <- function(df_stats) {
+  df_stats %>%
+    group_by(AIRLINE, MONTH, DAY) %>%
+    summarise(
+      total_atrasos = sum(n_atrasos),
+      total_voos = sum(n_total),
+      .groups = "drop"
+    ) %>%
+    transmute(
+      Cia = AIRLINE,
+      Data = as.Date(paste(2015, MONTH, DAY, sep = "-")),
+      Perc = total_atrasos / total_voos
+    )
+}
+stats_finais <- computeStats(stats_acumuladas)
+```
+
+5.
+
+```{r}
+library(lubridate)
+
+pal <- scale_fill_gradient(
+  low = "#4575b4", 
+  high = "#d73027", 
+  name = "Perc. Atrasos",
+  labels = scales::percent_format(accuracy = 1)
+)
+baseCalendario <- function(stats, cia) {
+  df_sub <- stats %>%
+    filter(Cia == cia) %>%
+    mutate(
+      Mes = month(Data, label = TRUE, abbr = TRUE,
+                  locale = "pt_BR.UTF-8"),
+      DiaSemana = wday(Data, label = TRUE, abbr = TRUE, week_start = 7,
+                       locale = "pt_BR.UTF-8"),
+      SemanaDoMes = ceiling((day(Data) + wday(floor_date(Data, "month")) - 1) / 7)
+    )
+  ggplot(df_sub, aes(x = SemanaDoMes, y = factor(DiaSemana, levels = rev(levels(DiaSemana))),
+                     fill = Perc)) +
+    geom_tile(color = "white", linewidth = 0.3) +
+    facet_wrap(~ Mes, ncol = 3, scales = "free_x") +
+    scale_y_discrete() +
+    theme_minimal() +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks = element_blank(),
+      strip.background = element_rect(fill = "grey95", color = NA),
+      strip.text = element_text(face = "bold")
+    ) +
+    labs(x = NULL, y = NULL)
+}
+cAA <- baseCalendario(stats_finais, "AA")
+cDL <- baseCalendario(stats_finais, "DL")
+cUA <- baseCalendario(stats_finais, "UA")
+cUS <- baseCalendario(stats_finais, "US")
+cAA + pal + ggtitle("Percentual de Atrasos em 2015 - American Airlines (AA)")
+cDL + pal + ggtitle("Percentual de Atrasos em 2015 - Delta Air Lines (DL)")
+cUA + pal + ggtitle("Percentual de Atrasos em 2015 - United Airlines (UA)")
+cUS + pal + ggtitle("Percentual de Atrasos em 2015 - US Airways (US)")
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
