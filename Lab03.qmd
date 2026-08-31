@@ -1,0 +1,118 @@
+---
+title: "ME315_Lab03"
+author: "Tiago Perroni"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(readr)
+library(dplyr)
+library(leaflet)
+```
+
+1.  
+
+```{r}
+airlines <- read_csv("airlines.csv")
+```
+
+```{r}
+airports <- read_csv(
+  "airports.csv", col_select = c(IATA_CODE, CITY, STATE, LATITUDE, LONGITUDE))
+```
+
+```{r}
+partes <- list()
+
+callback <- DataFrameCallback$new(function(x, pos) {
+  
+  x <- x[, c("DESTINATION_AIRPORT", "ARRIVAL_DELAY")]
+  
+  x <- x[
+    !grepl("^1", x$DESTINATION_AIRPORT) &
+    !is.na(x$DESTINATION_AIRPORT) &
+    !is.na(x$ARRIVAL_DELAY),]
+  
+  estatisticas <- x %>%
+    group_by(DESTINATION_AIRPORT) %>%
+    summarise(
+      n = n(),
+      soma = sum(ARRIVAL_DELAY),
+      .groups = "drop")
+  
+  partes[[length(partes) + 1]] <<- estatisticas})
+
+flights <- read_csv_chunked(
+  "flights.csv", callback = callback, chunk_size = 1000000)
+```
+
+```{r}
+estatisticas_finais <- bind_rows(partes) %>%
+  group_by(DESTINATION_AIRPORT) %>%
+  summarise(n = sum(n), soma = sum(soma), .groups = "drop") %>%
+  mutate(atraso_medio = soma / n)
+
+estatisticas_finais
+```
+
+2.  
+
+Na tabela flights, a chave que identifica o aeroporto de destino é: DESTINATION_AIRPORT
+
+Na tabela airports, a chave correspondente é: IATA_CODE
+
+Portanto, a relação é:
+
+flights$DESTINATION_AIRPORT ->
+airports$IATA_CODE
+
+```{r}
+aeroportos_ausentes <- flights %>%
+  anti_join(airports, by = c("DESTINATION_AIRPORT" = "IATA_CODE")) %>%
+  distinct(DESTINATION_AIRPORT)
+aeroportos_ausentes
+```
+
+```{r}
+flights <- flights %>%
+  left_join(airports %>%
+      select(IATA_CODE, CITY, STATE),by = c("DESTINATION_AIRPORT" = "IATA_CODE"))
+```
+
+3.  
+
+```{r}
+aeroportos_por_estado <- airports %>%
+  count(STATE, name = "numero_aeroportos") %>%
+  arrange(desc(numero_aeroportos))
+
+aeroportos_por_estado
+```
+
+4.  
+
+```{r}
+mapa_dados <- estatisticas_finais %>%
+  left_join(
+    airports,
+    by = c("DESTINATION_AIRPORT" = "IATA_CODE")
+  ) %>%
+  filter(!is.na(LATITUDE), !is.na(LONGITUDE))
+```
+
+```{r}
+mapa <- leaflet(mapa_dados) %>%
+  addTiles() %>%
+  addMarkers(lng = ~LONGITUDE, lat = ~LATITUDE, popup = ~paste0(
+      "<b>Aeroporto:</b> ", DESTINATION_AIRPORT,
+      "<br><b>Cidade:</b> ", CITY,
+      "<br><b>Estado:</b> ", STATE,
+      "<br><b>Atraso médio:</b> ", round(atraso_medio, 2), " minutos"))
+mapa
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
