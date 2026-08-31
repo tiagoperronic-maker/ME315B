@@ -1,0 +1,195 @@
+---
+title: "Lista3"
+author: "Tiago Perroni"
+format: pdf
+editor: visual
+---
+
+# Configurando RStudio para lidar com SQLite
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+con <- dbConnect(SQLite(), "me315.sqlite")
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+```
+
+1.  
+
+```{sql connection=con}
+SELECT DISTINCT STATE, FEE FROM PRESERVE
+```
+
+2.  
+
+```{sql connection=con}
+SELECT DISTINCT DNO FROM EMPLOYEE
+```
+
+3.  
+
+```{sql connection=con}
+SELECT DNO, SALARY FROM EMPLOYEE
+```
+
+```{sql connection=con}
+SELECT DISTINCT DNO, SALARY FROM EMPLOYEE
+```
+
+```{sql connection=con}
+SELECT DISTINCT DNO, SALARY FROM EMPLOYEE
+ORDER BY DNO, SALARY
+```
+
+4.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE STATE = 'MT' AND ACRES < 1000
+```
+
+5.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE ACRES > 1200 AND ACRES <= 15000
+```
+
+6.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE STATE = 'MT' AND FEE = 0 AND ACRES > 10000
+```
+
+7.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE STATE = 'MT' OR STATE = 'MA'
+```
+
+8.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE STATE = 'MT' OR ACRES < 1000
+```
+
+9.  
+
+```{sql connection=con}
+SELECT PNO, PNAME FROM PRESERVE
+WHERE NOT FEE = 0
+```
+
+10. 
+
+```{sql connection=con}
+SELECT PNO, PNAME FROM PRESERVE
+WHERE NOT FEE = 3 AND NOT FEE = 10
+```
+
+11. 
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE (STATE = 'AZ' AND FEE = 0) OR ACRES < 100 
+```
+
+12. 
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE (ACRES < 1000 AND FEE = 0) OR STATE = 'AZ'
+```
+
+13. 
+
+```{sql connection=con}
+SELECT * FROM PRESERVE 
+WHERE NOT FEE > 0 OR (STATE = 'MT' AND ACRES > 1000)
+```
+
+14. 
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT (STATE = 'MT' AND FEE = 0)
+```
+
+15. 
+
+São equivalentes pois temos: A and (B or C) = (A and B) or (A and C)
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE STATE = 'MA' AND (ACRES > 1000 OR FEE = 0.0)
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE (STATE = 'MA' AND ACRES > 1000) OR (STATE = 'MA' AND FEE = 0.0)
+```
+
+16. 
+
+São equivalentes pois temos: A or (B and C) = (A or B) and (A or C)
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE STATE = 'MA' OR (ACRES > 1000 AND FEE = 0.0)
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE (STATE = 'MA' OR ACRES > 1000) AND (STATE = 'MA' OR FEE = 0.0)
+```
+
+17. 
+
+Não são equivalentes pois temos: not (A and B) = not A or not B dessa forma a primeira e a terceira cláusulas são equivalentes mas não são equivalentes a segunda cláusula
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT (ACRES < 50 AND STATE = 'MA')
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT ACRES < 50 AND NOT STATE = 'MA'
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE ACRES >= 50 OR STATE <> 'MA'
+```
+
+18. 
+
+Não são equivalentes pois temos: not (A or B) = not A and not B dessa forma a primeira e a terceira cláusulas são equivalentes mas não são equivalentes a segunda cláusula
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT (ACRES < 50 OR STATE = 'MA')
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT ACRES < 50 OR NOT STATE = 'MA'
+```
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT ACRES < 50 AND NOT STATE = 'MA'
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
