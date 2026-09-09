@@ -1,0 +1,168 @@
+---
+title: "Lista04_ME315"
+author: "Tiago Perroni - 281972"
+format: pdf
+editor: visual
+---
+
+# Configurando RStudio para lidar com SQLite
+
+```{r}
+library(DBI)
+library(RSQLite)
+
+con <- dbConnect(SQLite(), "me315.sqlite")
+```
+
+1.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE PNO IN (2, 4, 6, 8, 10)
+```
+
+2.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT PNAME IN ('DANCING PRAIRIE', 'MULESHOE RANCH', 'MCELWAIN-OLSEN', 'TATKON')
+```
+
+3.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE PNO BETWEEN 3 AND 10
+```
+
+4.  
+
+```{sql connection=con}
+SELECT * FROM PRESERVE
+WHERE NOT PNO BETWEEN 3 AND 10
+```
+
+5.  
+
+```{sql connection=con}
+SELECT STATE, PNO, ACRES FROM PRESERVE
+WHERE NOT STATE IN ('MT', 'AZ') AND ACRES NOT BETWEEN 50 AND 800
+ORDER BY PNO DESC
+```
+
+6.  
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE 'D%'
+```
+
+7.  
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%TOWN%'
+```
+
+8.  
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%PRAIRIE'
+```
+
+9.  
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%ING%'
+```
+
+10. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%E'
+```
+
+11. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%ME%'
+```
+
+12. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%M%E%'
+```
+
+13. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '_A%'
+```
+
+14. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '% %'
+```
+
+15. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%FARM%' OR PNAME LIKE '%SWAMP%' OR PNAME LIKE '%PRAIRIE%'
+```
+
+16. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '%.%' OR PNAME LIKE '%-%'
+```
+
+17. 
+
+```{sql connection=con}
+SELECT PNAME FROM PRESERVE
+WHERE PNAME LIKE '____R%PRAIRIE'
+```
+
+18. 
+
+```{sql connection=con}
+SELECT * FROM EMPLOYEE
+WHERE DNO IN (10, 40)
+```
+
+19. 
+
+```{sql connection=con}
+SELECT * FROM EMPLOYEE
+WHERE DNO NOT IN (10, 40)
+```
+
+20. 
+
+```{sql connection=con}
+SELECT * FROM EMPLOYEE
+WHERE SALARY BETWEEN 500 AND 2000
+```
+
+21. 
+
+```{sql connection=con}
+SELECT * FROM EMPLOYEE
+WHERE SALARY NOT BETWEEN 500 AND 2000
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
