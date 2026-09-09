@@ -1,0 +1,85 @@
+---
+title: "Lab04_ME315"
+author: "Tiago Perroni - 281972"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(readxl)
+library(tidyverse)
+```
+
+
+```{r}
+fname <- "\\\\smb/ra281972/Documentos/WDIEXCEL.xlsx"
+file.exists(fname)
+```
+
+
+```{r}
+countries <- read_excel(fname, sheet = "Country")
+```
+
+
+```{r}
+paises_selecionados <- c("BRA", "ARG", "CHL", "COL", "PER")
+countries <- countries |>  
+  filter(`Country Code` %in% paises_selecionados)
+```
+
+
+```{r}
+WDI <- read_excel(fname, sheet = "Data")
+```
+
+
+```{r}
+WDI <- WDI |>  
+  select(`Country Code`, `Indicator Code`, `1960`:`2018`)
+```
+
+
+```{r}
+WDI_tidy <- WDI |> 
+  pivot_longer(cols = `1960`:`2018`, names_to = "YEAR", values_to = "Value")
+```
+
+
+```{r}
+WDI_tidy <- WDI_tidy |>  
+  mutate(YEAR = as.integer(YEAR))
+
+is.integer(WDI_tidy$YEAR)
+```
+
+
+```{r}
+WDI_filtrado <- WDI_tidy |> 
+  semi_join(countries, by = "Country Code") |>  
+  filter(`Indicator Code` == "SP.DYN.CBRT.IN") |> 
+  inner_join(countries |> select(`Country Code`, `Short Name`), by = "Country Code") |> 
+  select(`Country Code`, `Short Name`, YEAR, Value) |> 
+  rename(SP.DYN.CBRT.IN = Value)
+```
+
+
+```{r}
+WDI_ordenado <- WDI_filtrado |>  
+  arrange(`Country Code`, YEAR)
+```
+
+
+```{r}
+ggplot(WDI_ordenado, aes(x = YEAR, y = SP.DYN.CBRT.IN, color = `Short Name`)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Taxa Bruta de Natalidade (1960-2018)",
+  subtitle = "Comparativo entre países selecionados da América do Sul",
+  x = "Ano", y = "Taxa de Natalidade (por 1.000 pessoas)",color = "País")
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
