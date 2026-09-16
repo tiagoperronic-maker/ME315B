@@ -1,0 +1,132 @@
+---
+title: "Lab05_ME315"
+author: "Tiago Perroni - 281972"
+format: html
+editor: visual
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(leaflet)
+```
+
+```{r}
+analisa_aeronave <- function(tail_number, arquivo) {
+  dados_aeronave <- read_csv_chunked(
+    file = arquivo,
+    callback = DataFrameCallback$new(function(df, pos) {
+      df |>  filter(TAIL_NUMBER == tail_number)
+    }),
+    chunk_size = 100000,
+    show_col_types = FALSE
+  )
+  if (nrow(dados_aeronave) == 0) {
+    stop("O TAIL_NUMBER informado não foi encontrado nos dados.")
+  }
+  return(dados_aeronave)
+}
+```
+
+```{r}
+prepara_tabela_tidy <- function(dados_aeronave, arquivo_aeroportos = "airports.csv") {
+  aeroportos <- read_csv(arquivo_aeroportos, show_col_types = FALSE)
+  tabela_tidy <- dados_aeronave |> 
+    mutate(
+      DEPARTURE_TIME = as.numeric(DEPARTURE_TIME),
+      YEAR = as.numeric(YEAR),
+      MONTH = as.numeric(MONTH),
+      DAY = as.numeric(DAY)
+    ) |> 
+    filter(!is.na(DEPARTURE_TIME)) |> 
+    mutate(
+      hora = floor(DEPARTURE_TIME / 100),
+      minuto = DEPARTURE_TIME %% 100,
+      hora = ifelse(hora == 24, 0, hora),
+      data_hora = make_datetime(YEAR, MONTH, DAY, hora, minuto)
+    ) |> 
+    arrange(data_hora) |> 
+    left_join(aeroportos |>  select(IATA_CODE, LATITUDE, LONGITUDE), 
+              by = c("ORIGIN_AIRPORT" = "IATA_CODE")) |> 
+    rename(lat_origem = LATITUDE, long_origem = LONGITUDE) |> 
+    left_join(aeroportos |>  select(IATA_CODE, LATITUDE, LONGITUDE), 
+              by = c("DESTINATION_AIRPORT" = "IATA_CODE")) |> 
+    rename(lat_destino = LATITUDE, long_destino = LONGITUDE) |> 
+    mutate(
+      AIR_TIME = as.numeric(AIR_TIME),
+      DISTANCE = as.numeric(DISTANCE),
+      velocidade_media = DISTANCE / (AIR_TIME / 60),
+      espessura_linha = ifelse(is.na(velocidade_media) | velocidade_media == 0, 2, velocidade_media / 100)
+    )
+  return(list(tabela = tabela_tidy, aeroportos = aeroportos))
+}
+```
+
+```{r}
+gera_mapa_trajeto <- function(tabela_tidy, aeroportos) {
+  mapa <- leaflet() |> 
+    addTiles() 
+  for (i in 1:nrow(tabela_tidy)) {
+    linha <- tabela_tidy[i, ]
+    if (!is.na(linha$lat_origem) && !is.na(linha$lat_destino)) {
+      mapa <- mapa |> 
+        addPolylines(
+          lng = c(linha$long_origem, linha$long_destino),
+          lat = c(linha$lat_origem, linha$lat_destino),
+          weight = linha$espessura_linha,
+          color = "blue",
+          opacity = 0.6,
+          popup = paste0(
+            "<b>Data: </b>", linha$YEAR, "-", linha$MONTH, "-", linha$DAY, "<br>",
+            "<b>Trecho: </b>", linha$ORIGIN_AIRPORT, " ➔ ", linha$DESTINATION_AIRPORT, "<br>",
+            "<b>Velocidade Média: </b>", round(linha$velocidade_media, 1), " mph"
+          )
+        )
+    }
+  }
+  pontos_aeroportos <- aeroportos |> 
+    filter(IATA_CODE %in% unique(c(tabela_tidy$ORIGIN_AIRPORT, tabela_tidy$DESTINATION_AIRPORT)))
+  mapa <- mapa |> 
+    addCircleMarkers(
+      data = pontos_aeroportos,
+      lng = ~LONGITUDE,
+      lat = ~LATITUDE,
+      radius = 4,
+      color = "red",
+      popup = ~paste0("<b>Aeroporto: </b>", AIRPORT, " (", IATA_CODE, ")")
+    )
+  
+  return(mapa)
+}
+```
+
+```{r}
+analisa_aeronave <- function(tail_number, arquivo) {
+  dados <- read_csv_chunked(
+    file = arquivo,
+    callback = DataFrameCallback$new(function(df, pos) df |>  filter(TAIL_NUMBER == tail_number)),
+    chunk_size = 100000,
+    show_col_types = FALSE
+  )
+  processado <- prepara_tabela_tidy(dados)
+  mapa_final <- gera_mapa_trajeto(processado$tabela, processado$aeroportos)
+  return(list(
+    tabela = processado$tabela,
+    mapa = mapa_final
+  ))
+}
+```
+
+```{r}
+resultado <- analisa_aeronave(
+  tail_number = "N431WN", 
+  arquivo = file.path("flights.csv")
+)
+head(resultado$tabela)
+resultado$mapa
+```
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
