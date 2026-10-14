@@ -1,0 +1,81 @@
+---
+title: "Lab08"
+author: "Tiago Perroni - 281972"
+format: pdf
+editor: visual
+---
+
+```{r}
+library(polars)
+
+# Leitura dos arquivos TSV 
+basics <- pl$read_csv(
+  "title.basics0.tsv.gz", 
+  separator = "\t", 
+  null_values = "\\N"
+)
+
+ratings <- pl$read_csv(
+  "title.ratings.tsv.gz", 
+  separator = "\t", 
+  null_values = "\\N"
+)
+
+principals <- pl$read_csv(
+  "title.principals0.tsv.gz", 
+  separator = "\t", 
+  null_values = "\\N"
+)
+```
+
+```{r}
+# 1.
+top5_filmes <- basics$
+  filter(pl$col("titleType") == "movie")$
+  join(ratings, on = "tconst", how = "inner")$
+  sort("averageRating", "numVotes", descending = c(TRUE, TRUE))$head(5)$
+  select("tconst", "primaryTitle", "averageRating", "numVotes")
+
+print(top5_filmes)
+```
+
+```{r}
+# 2.
+genero_popular <- ratings$
+  filter(pl$col("averageRating") > 8)$
+  join(
+    basics$filter(pl$col("titleType") == "movie"), 
+    on = "tconst", 
+    how = "inner"
+  )$filter(pl$col("genres")$is_not_null())$
+  with_columns(pl$col("genres")$str$split(","))$
+  explode("genres")$
+  group_by("genres")$agg(pl$len()$alias("frequencia"))$
+  sort("frequencia", descending = TRUE)$
+  head(1)
+
+print(genero_popular)
+```
+
+```{r}
+# 3.
+top_atores <- ratings$
+  filter(pl$col("averageRating") > 7.5)$
+  join(
+    basics$filter(pl$col("titleType") == "movie"), 
+    on = "tconst", 
+    how = "inner"
+  )$
+  join(principals, on = "tconst", how = "inner")$
+  filter((pl$col("category") == "actor") | (pl$col("category") == "actress"))$
+  group_by("nconst")$agg(pl$len()$alias("total_filmes"))$
+  sort("total_filmes", descending = TRUE)$
+  head(3)
+
+print(top_atores)
+```
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
