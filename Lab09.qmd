@@ -1,0 +1,100 @@
+---
+title: "Lab09"
+author: "Tiago Perroni - 281972"
+format: pdf
+editor: visual
+---
+
+```{python}
+import pandas as pd
+import matplotlib.pyplot as plt
+from plotnine import (
+    ggplot, aes, geom_point, geom_smooth, scale_x_log10, scale_y_log10, 
+    facet_wrap, facet_grid, labs, theme_minimal, theme, element_text)
+from plotnine.data import diamonds
+
+cut_order = ["Fair", "Good", "Very Good", "Premium", "Ideal"]
+color_order = ["J", "I", "H", "G", "F", "E", "D"]
+clarity_order = ["I1", "SI2", "SI1", "VS2", "VS1", "VVS2", "VVS1", "IF"]
+
+diamonds['cut'] = pd.Categorical(diamonds['cut'], categories=cut_order, ordered=True)
+diamonds['color'] = pd.Categorical(diamonds['color'], categories=color_order, ordered=True)
+diamonds['clarity'] = pd.Categorical(diamonds['clarity'], categories=clarity_order, ordered=True)
+
+diamonds.head()
+```
+
+```{python questao-2}
+plot_2 = (
+    ggplot(diamonds, aes(x='carat', y='price'))
+    + geom_point(alpha=0.08, size=0.5, color='#2c3e50')
+    + geom_smooth(method='lowess', color='#e74c3c', size=1)
+    + scale_x_log10()+ scale_y_log10()
+    + labs(
+        title="Relação entre Peso (Carat) e Preço (USD) dos Diamantes",
+        x="Peso em Quilates (escala log10)",
+        y="Preço em USD (escala log10)")
+    + theme_minimal())
+plot_2
+```
+
+Ações tomadas para garantir a qualidade do gráfico:
+
+Com 53.940 observações, o gráfico de dispersão padrão viraria uma mancha preta. Aplicou-se transparência severa (alpha=0.08) e tamanho de ponto reduzido (size=0.5).
+Como carat e price possuem distribuições com forte assimetria à direita e comportamento exponencial, a conversão para escala logarítmica lineariza a relação e explicita variações percentuais.
+Adicionou-se uma curva não paramétrica para capturar a tendência média sem sobrecarregar a visualização.
+
+Achados:
+
+Existe uma forte associação positiva e exponencial entre o peso (carat) e o preço (price) dos diamantes, à medida que o peso aumenta, o valor comercial cresce desproporcionalmente devido à raridade de pedras maiores. Ao aplicar a transformação logarítmica em ambos os eixos, a relação assume um comportamento predominantemente linear, confirmando que aumentos percentuais no peso resultam em aumentos percentuais constantes no preço.
+
+```{python questao-3}
+plot_3 = (
+    ggplot(diamonds, aes(x='carat', y='price', color='cut'))
+    + geom_point(alpha=0.04, size=0.4)
+    + geom_smooth(method='lm', se=False, size=1)
+    + scale_x_log10() + scale_y_log10()
+    + facet_wrap('~cut', nrow=1)
+    + labs(
+        title="Relação Preço vs. Peso por Qualidade de Corte",
+        x="Peso em Quilates (escala log10)",
+        y="Preço em USD (escala log10)")
+    + theme_minimal()
+    + theme(legend_position='none'))
+plot_3
+```
+
+Achados:
+
+A relação positiva entre preço e peso se mantém constante em todos os tipos de corte, no entanto, nota-se que diamantes com cortes de melhor qualidade partem de um nível base de preço ligeiramente superior para um mesmo peso em relação a cortes inferiores. A inclinação das retas de regressão linear nas escalas logarítmicas é muito similar entre as categorias, demonstrando que a taxa de valorização em função do peso não sofre grandes alterações estruturais isoladamente pelo tipo de corte.
+
+```{python questao-4, fig.width=12, fig.height=8}
+plot_4 = (
+    ggplot(diamonds, aes(x='carat', y='price', color='clarity'))
+    + geom_smooth(method='lm', se=False, size=0.8)
+    + scale_x_log10() + scale_y_log10()
+    + facet_grid('color ~ cut')
+    + labs(
+        title="Tendência de Preço vs. Peso por Corte, Cor e Clareza",
+        x="Peso em Quilates (escala log10)",
+        y="Preço em USD (escala log10)",
+        color="Clareza")
+    + theme_minimal() + theme(
+        strip_text=element_text(size=8),
+        axis_text=element_text(size=6)))
+plot_4
+```
+
+Dificuldades encontradas:
+
+Ao tentar analisar simultaneamente 5 níveis de corte, 7 cores e 8 graus de clareza, surge o desafio da alta dimensionalidade pois são 280 combinações possíveis. Plotar os dados brutos de dispersão de todos os 280 grupos gera poluição visual e impede a interpretação. Para contornar esse problema, removeu-se os pontos individuais e manteve-se apenas as linhas de tendência (linear geom_smooth(method='lm')) organizadas em uma grade de painéis (facet_grid('color ~ cut')), utilizando cores para mapear a clareza.
+
+Achados:
+
+A relação positiva de crescimento de preço conforme o peso é consistente em praticamente todas as 280 combinações. Contudo, o patamar absoluto de preço e a inclinação mudam consideravelmente: a clareza e a cor exercem um impacto multiplicador marcante sobre o preço por quilate. Diamantes com combinações de cor superior e máxima clareza apresentam retas de preço significativamente mais deslocadas para cima em relação a diamantes de cor fraca e baixa clareza, mostrando que a pureza e a cor da pedra intensificam o prêmio cobrado por quilates adicionais.
+
+```{r}
+Sys.setenv(TZ = "America/Sao_Paulo")
+Sys.time()
+```
+
